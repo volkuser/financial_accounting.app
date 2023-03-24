@@ -1,8 +1,12 @@
+import 'package:financial_accounting/screen_arguments.dart';
+import 'package:financial_accounting/shared_preferences_control.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
   @override
   _LoginPageState createState() => _LoginPageState();
 }
@@ -27,7 +31,7 @@ class _LoginPageState extends State<LoginPage> {
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(
-                  labelText: 'Email',
+                  labelText: 'User name',
                 ),
               ),
               TextFormField(
@@ -64,8 +68,6 @@ class _LoginPageState extends State<LoginPage> {
       'password': password
     };
 
-    //final String requestBody = jsonEncode(requestData);
-
     final response = await http.post(
       Uri.parse('http://localhost:8888/token'),
       headers: {
@@ -79,7 +81,20 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     if (response.statusCode == 200) {
-      // Login successful, do something
+      // Login successful
+      String refreshToken = '';
+
+      final jsonData = json.decode(response.body);
+      refreshToken = jsonData['data']['refreshToken'];
+      SharedPreferencesControl.saveData(refreshToken);
+      SharedPreferencesControl.loadData().then((String value) {
+        setState(() {
+          refreshToken = value;
+        });
+      });
+
+      Navigator.pushNamed(context, '/financial-accounting',
+          arguments: ScreenArguments(refreshToken));
     } else {
       // Login failed, show error message
       final error = response.body;
