@@ -44,7 +44,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
         final name = body['data']['userName'];
         final email = body['data']['email'];
-        // Get any other fields you want to auto-fill here
 
         // Set the initial values of the form fields
         _name = name;
