@@ -19,6 +19,27 @@ class _FinancialAccountingControlPageState
   final _formKey = GlobalKey<FormState>();
   final _record = FinanceRecord();
 
+  late int? _currentIdController;
+  final _transactionNumberController = TextEditingController();
+  final _transactionNameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _categoryController = TextEditingController();
+  final _transactionDateController = TextEditingController();
+  final _transactionAmountController = TextEditingController();
+
+  void _onRecordTap(FinanceRecord record) {
+    setState(() {
+      _currentIdController = record.id;
+      _transactionNumberController.text = record.transactionNumber.toString();
+      _transactionNameController.text = record.transactionName!;
+      _descriptionController.text = record.description ?? '';
+      _categoryController.text = record.category!;
+      _transactionDateController.text =
+          record.transactionDate!.toIso8601String();
+      _transactionAmountController.text = record.transactionAmount.toString();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)!.settings.arguments as ScreenArguments;
@@ -54,6 +75,7 @@ class _FinancialAccountingControlPageState
               child: Column(
                 children: [
                   TextFormField(
+                    controller: _transactionNumberController,
                     decoration:
                         const InputDecoration(labelText: 'Transaction Number'),
                     validator: (value) {
@@ -67,6 +89,7 @@ class _FinancialAccountingControlPageState
                     },
                   ),
                   TextFormField(
+                    controller: _transactionNameController,
                     decoration:
                         const InputDecoration(labelText: 'Transaction Name'),
                     validator: (value) {
@@ -80,12 +103,14 @@ class _FinancialAccountingControlPageState
                     },
                   ),
                   TextFormField(
+                    controller: _descriptionController,
                     decoration: const InputDecoration(labelText: 'Description'),
                     onSaved: (value) {
                       _record.description = value;
                     },
                   ),
                   TextFormField(
+                    controller: _categoryController,
                     decoration: const InputDecoration(labelText: 'Category'),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -98,6 +123,7 @@ class _FinancialAccountingControlPageState
                     },
                   ),
                   TextFormField(
+                    controller: _transactionDateController,
                     decoration:
                         const InputDecoration(labelText: 'Transaction Date'),
                     validator: (value) {
@@ -111,6 +137,7 @@ class _FinancialAccountingControlPageState
                     },
                   ),
                   TextFormField(
+                    controller: _transactionAmountController,
                     decoration:
                         const InputDecoration(labelText: 'Transaction Amount'),
                     validator: (value) {
@@ -132,7 +159,7 @@ class _FinancialAccountingControlPageState
                         child: const Text('Add'),
                       ),
                       ElevatedButton(
-                        onPressed: _update,
+                        onPressed: _updateRecord,
                         child: const Text('Update'),
                       ),
                     ],
@@ -151,12 +178,15 @@ class _FinancialAccountingControlPageState
                       itemCount: records.length,
                       itemBuilder: (context, index) {
                         final record = records[index];
-                        return ListTile(
-                          title: Text(record.transactionName ?? ''),
-                          subtitle:
-                              Text(record.transactionDate?.toString() ?? ''),
-                          trailing:
-                              Text(record.transactionAmount?.toString() ?? ''),
+                        return InkWell(
+                          onTap: () => _onRecordTap(record),
+                          child: ListTile(
+                            title: Text(record.transactionName ?? ''),
+                            subtitle:
+                                Text(record.transactionDate?.toString() ?? ''),
+                            trailing: Text(
+                                record.transactionAmount?.toString() ?? ''),
+                          ),
                         );
                       },
                     );
@@ -200,7 +230,6 @@ class _FinancialAccountingControlPageState
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Record added successfully.')),
         );
-        _getRecords();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -213,31 +242,55 @@ class _FinancialAccountingControlPageState
         SnackBar(content: Text('Error adding record: $e')),
       );
     }
+
+    setState(() {
+      _formKey.currentState!.reset();
+    });
   }
 
-  void _update() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-
-      final context = _formKey.currentContext!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Updating record...')),
-      );
-
-      /* final query = Query<FinanceRecord>(context)
-        ..values = _record
-        ..where((r) => r.id).equalTo(_record.id);
-
-      await query.updateOne();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Record updated.')),
-      ); */
-
-      setState(() {
-        _formKey.currentState!.reset();
-      });
+  void _updateRecord() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+    _formKey.currentState!.save();
+
+    final url =
+        Uri.parse('http://localhost:8888/finance-record/$_currentIdController');
+    final headers = <String, String>{
+      'Content-Type': 'application/json', // use the saved refresh token here
+    };
+    final body = json.encode({
+      'transactionNumber': _record.transactionNumber,
+      'transactionName': _record.transactionName,
+      'description': _record.description,
+      'category': _record.category,
+      'transactionDate': _record.transactionDate!.toIso8601String(),
+      'transactionAmount': _record.transactionAmount,
+    });
+
+    try {
+      final response = await http.put(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Record updated successfully.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Error updating record. Status code: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating record: $e')),
+      );
+    }
+
+    setState(() {
+      _formKey.currentState!.reset();
+    });
   }
 
   Future<List<FinanceRecord>> _getRecords() async {
