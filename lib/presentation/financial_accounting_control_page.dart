@@ -128,7 +128,7 @@ class _FinancialAccountingControlPageState
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       ElevatedButton(
-                        onPressed: _submit,
+                        onPressed: _addRecord,
                         child: const Text('Add'),
                       ),
                       ElevatedButton(
@@ -174,26 +174,44 @@ class _FinancialAccountingControlPageState
     );
   }
 
-  void _submit() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
+  void _addRecord() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    _formKey.currentState!.save();
 
-      final context = _formKey.currentContext!;
+    final url = Uri.parse('http://localhost:8888/finance-record');
+    final headers = <String, String>{
+      'Content-Type': 'application/json', // use the saved refresh token here
+    };
+    final body = json.encode({
+      'transactionNumber': _record.transactionNumber,
+      'transactionName': _record.transactionName,
+      'description': _record.description,
+      'category': _record.category,
+      'transactionDate': _record.transactionDate!.toIso8601String(),
+      'transactionAmount': _record.transactionAmount,
+    });
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Record added successfully.')),
+        );
+        _getRecords();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Error adding record. Status code: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Adding record...')),
+        SnackBar(content: Text('Error adding record: $e')),
       );
-
-      /* final query = Query<FinanceRecord>(context)..values = _record;
-
-      await query.insert();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Record added.')),
-      ); */
-
-      setState(() {
-        _formKey.currentState!.reset();
-      });
     }
   }
 
