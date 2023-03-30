@@ -162,6 +162,14 @@ class _FinancialAccountingControlPageState
                         onPressed: _updateRecord,
                         child: const Text('Update'),
                       ),
+                      ElevatedButton(
+                        onPressed: _deleteHere,
+                        child: const Text('Delete here'),
+                      ),
+                      ElevatedButton(
+                        onPressed: _delete,
+                        child: const Text('Delete'),
+                      ),
                     ],
                   ),
                 ],
@@ -294,13 +302,91 @@ class _FinancialAccountingControlPageState
   }
 
   Future<List<FinanceRecord>> _getRecords() async {
-    final response = await http
-        .get(Uri.parse('http://localhost:8888/finance-record'), headers: {
-      'Content-Type': 'application/json',
-    });
+    final response = await http.get(
+      Uri.parse('http://localhost:8888/finance-record'),
+      headers: {'Content-Type': 'application/json'},
+    );
     final parsed = jsonDecode(response.body).cast<Map<String, dynamic>>();
-    return parsed
+    final records = parsed
         .map<FinanceRecord>((json) => FinanceRecord.fromJson(json))
-        .toList();
+        .where((record) => record.is_deleted != true) // фильтрация
+        .toList(); // преобразование обратно в список
+
+    return records;
+  }
+
+  void _deleteHere() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    _formKey.currentState!.save();
+
+    final url = Uri.parse(
+        'http://localhost:8888/finance-record/by-id/go-deleted?id=$_currentIdController');
+    final headers = <String, String>{
+      'Content-Type': 'application/json', // use the saved refresh token here
+    };
+
+    try {
+      final response = await http.put(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Record logical deleting successfully.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Error logical deleting record. Status code: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error logical deleting record: $e')),
+      );
+    }
+
+    setState(() {
+      _formKey.currentState!.reset();
+    });
+  }
+
+  void _delete() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    _formKey.currentState!.save();
+
+    final url =
+        Uri.parse('http://localhost:8888/finance-record/$_currentIdController');
+    final headers = <String, String>{
+      'Content-Type': 'application/json', // use the saved refresh token here
+    };
+
+    try {
+      final response = await http.delete(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Record deleting successfully.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Error deleting record. Status code: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting record: $e')),
+      );
+    }
+
+    setState(() {
+      _formKey.currentState!.reset();
+    });
   }
 }

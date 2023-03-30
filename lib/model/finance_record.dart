@@ -6,6 +6,7 @@ class FinanceRecord {
   String? category;
   DateTime? transactionDate;
   double? transactionAmount;
+  bool is_deleted = false;
 
   FinanceRecord({
     this.id,
@@ -15,6 +16,7 @@ class FinanceRecord {
     this.category,
     this.transactionDate,
     this.transactionAmount,
+    this.is_deleted = false,
   });
 
   factory FinanceRecord.fromJson(Map<String, dynamic> json) => FinanceRecord(
@@ -25,5 +27,6 @@ class FinanceRecord {
         category: json['category'],
         transactionDate: DateTime.parse(json['transactionDate']),
         transactionAmount: json['transactionAmount'].toDouble(),
+        is_deleted: json['is_deleted'] ?? false,
       );
 }
