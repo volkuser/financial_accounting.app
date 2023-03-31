@@ -229,6 +229,7 @@ class _FinancialAccountingControlPageState
       'category': _record.category,
       'transactionDate': _record.transactionDate!.toIso8601String(),
       'transactionAmount': _record.transactionAmount,
+      'is_deleted': false
     });
 
     try {
@@ -274,6 +275,7 @@ class _FinancialAccountingControlPageState
       'category': _record.category,
       'transactionDate': _record.transactionDate!.toIso8601String(),
       'transactionAmount': _record.transactionAmount,
+      'is_deleted': false
     });
 
     try {
